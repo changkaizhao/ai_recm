@@ -1,0 +1,292 @@
+package com.HKJC.SolMessager;
+
+import java.util.ArrayList;
+import java.util.Hashtable;
+import java.util.List;
+import java.util.concurrent.CountDownLatch;
+
+import javax.jms.Connection;
+import javax.jms.ConnectionFactory;
+import javax.jms.DeliveryMode;
+import javax.jms.JMSException;
+import javax.jms.Message;
+import javax.jms.MessageConsumer;
+import javax.jms.MessageListener;
+import javax.jms.MessageProducer;
+import javax.jms.ObjectMessage;
+import javax.jms.Queue;
+import javax.jms.Session;
+import javax.jms.TextMessage;
+import javax.naming.Context;
+import javax.naming.InitialContext;
+
+import com.HKJC.BetPool.Bet;
+import com.HKJC.BetPool.BetFilter;
+import com.HKJC.BetPool.Pool;
+import com.HKJC.Config.Configurator;
+import com.HKJC.Exceptions.HKJCException;
+import com.HKJC.RaceSelector.RaceTime;
+import com.HKJC.RatingCalculator.BetType;
+import com.HKJC.Recommendation.AllScoreResponse;
+import com.HKJC.Recommendation.BetRecommendationCalculator;
+import com.HKJC.Recommendation.RecommendRequest;
+import com.HKJC.Recommendation.Recommendation;
+import com.HKJC.Recommendation.ScoreResult;
+import com.solacesystems.jms.SolJmsUtility;
+import com.solacesystems.jms.SupportedProperty;
+import com.solacesystems.jms.message.SolObjectMessage;
+
+import org.springframework.boot.SpringApplication;
+import org.springframework.boot.autoconfigure.SpringBootApplication;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RestController;
+
+@SpringBootApplication
+@RestController
+public class SolMessagerApplication {
+	final String QUEUE_NAME = Configurator.getInstance().QUEUE_NAME;
+
+	// hk/g/prdt/wager/evt/01/upd/ai/bet/recomd_req/{instant_id}/{account_no}/recomd/{status}
+	final String QUEUE_JNDI_NAME = Configurator.getInstance().QUEUE_JNDI_NAME;
+	final String CONNECTION_FACTORY_JNDI_NAME = Configurator.getInstance().CONNECTION_FACTORY_JNDI_NAME;
+	final String host = Configurator.getInstance().host;
+	final String username = Configurator.getInstance().username;
+	final String password = Configurator.getInstance().password;
+	final String vpnName = Configurator.getInstance().vpnName;
+
+	final CountDownLatch latch = new CountDownLatch(1);
+
+	@GetMapping("/msg")
+	public Response getMessage() throws Exception {
+		System.out.printf("QueueConsumerJNDI is connecting to Solace messaging at %s...%n", host);
+
+		// setup environment variables for creating of the initial context
+		Hashtable<String, Object> env = new Hashtable<String, Object>();
+		// use the Solace JNDI initial context factory
+		env.put(InitialContext.INITIAL_CONTEXT_FACTORY, "com.solacesystems.jndi.SolJNDIInitialContextFactory");
+
+		// assign Solace message router connection parameters
+		env.put(InitialContext.PROVIDER_URL, host);
+		env.put(Context.SECURITY_PRINCIPAL, username + '@' + vpnName); // Formatted as user@message-vpn
+		env.put(Context.SECURITY_CREDENTIALS, password);
+
+		// Create the initial context that will be used to lookup the JMS Administered
+		// Objects.
+		InitialContext initialContext = new InitialContext(env);
+		// Lookup the connection factory
+		ConnectionFactory connectionFactory = (ConnectionFactory) initialContext.lookup(CONNECTION_FACTORY_JNDI_NAME);
+
+		// Create connection to the Solace router
+		Connection connection = connectionFactory.createConnection();
+
+		// Create a non-transacted, client ACK session.
+		Session session = connection.createSession(false, SupportedProperty.SOL_CLIENT_ACKNOWLEDGE);
+
+		System.out.printf("Connected to the Solace Message VPN '%s' with client username '%s'.%n", vpnName,
+				username);
+
+		// Lookup the queue.
+		Queue queue = (Queue) initialContext.lookup(QUEUE_JNDI_NAME);
+
+		// From the session, create a consumer for the destination.
+		MessageConsumer messageConsumer = session.createConsumer(queue);
+
+		List<SolMessage> msgList = new ArrayList<SolMessage>();
+
+		// Use the anonymous inner class for receiving messages asynchronously
+		messageConsumer.setMessageListener((MessageListener) new MessageListener() {
+			@Override
+			public void onMessage(Message message) {
+				try {
+					if (message instanceof SolObjectMessage) {
+						// message).message);
+
+						SolObjectMessage msg = (SolObjectMessage) message;
+						System.out.printf("ObjextMessage received: '%s'%n", msg.getObject().toString());
+
+						msgList.add((SolMessage) msg.getObject());
+
+					} else if (message instanceof TextMessage) {
+						System.out.printf("TextMessage received: '%s'%n", ((TextMessage) message).getText());
+
+					} else {
+						System.out.println("Message received.");
+					}
+					System.out.printf("Message Content:%n%s%n", SolJmsUtility.dumpMessage(message));
+
+					// ACK the received message manually because of the set
+					// SupportedProperty.SOL_CLIENT_ACKNOWLEDGE above
+					message.acknowledge();
+
+					latch.countDown(); // unblock the main thread
+				} catch (JMSException ex) {
+					System.out.println("Error processing incoming message.");
+					ex.printStackTrace();
+
+					latch.countDown(); // unblock the main thread
+
+				}
+			}
+		});
+
+		// Start receiving messages
+		connection.start();
+		System.out.println("Awaiting message...");
+		// the main thread blocks at the next statement until a message received
+		latch.await();
+
+		connection.stop();
+		// Close everything in the order reversed from the opening order
+		// NOTE: as the interfaces below extend AutoCloseable,
+		// with them it's possible to use the "try-with-resources" Java statement
+		// see details at
+		// https://docs.oracle.com/javase/tutorial/essential/exceptions/tryResourceClose.html
+		messageConsumer.close();
+		session.close();
+		connection.close();
+		// The initial context needs to be close; it does not extend AutoCloseable
+		initialContext.close();
+
+		if (msgList.size() > 0) {
+			return Response.success(msgList.get(0));
+		} else {
+			return Response.error(500, "Something went wrong :( ");
+		}
+	}
+
+	@PostMapping("/msg")
+	public Response sentMessage(@RequestBody SolMessage messageObj) throws Exception {
+		System.out.printf("QueueProducerJNDI is connecting to Solace messaging at %s...%n", host);
+
+		// setup environment variables for creating of the initial context
+		Hashtable<String, Object> env = new Hashtable<String, Object>();
+		// use the Solace JNDI initial context factory
+		env.put(InitialContext.INITIAL_CONTEXT_FACTORY, "com.solacesystems.jndi.SolJNDIInitialContextFactory");
+
+		// assign Solace messaging connection parameters
+		env.put(InitialContext.PROVIDER_URL, host);
+		env.put(Context.SECURITY_PRINCIPAL, username + '@' + vpnName); // Formatted as user@message-vpn
+		env.put(Context.SECURITY_CREDENTIALS, password);
+
+		// Create the initial context that will be used to lookup the JMS Administered
+		// Objects.
+		InitialContext initialContext = new InitialContext(env);
+		// Lookup the connection factory
+		ConnectionFactory connectionFactory = (ConnectionFactory) initialContext.lookup(CONNECTION_FACTORY_JNDI_NAME);
+
+		// Create connection to Solace messaging
+		Connection connection = connectionFactory.createConnection();
+
+		// Create a non-transacted, auto ACK session.
+		Session session = connection.createSession(false, Session.AUTO_ACKNOWLEDGE);
+
+		System.out.printf("Connected to the Solace Message VPN '%s' with client username '%s'.%n", vpnName,
+				username);
+
+		// Lookup the queue.
+		Queue queue = (Queue) initialContext.lookup(QUEUE_JNDI_NAME);
+
+		// Create the message producer for the created queue
+		MessageProducer messageProducer = session.createProducer(queue);
+
+		// Create a text message.
+		// TextMessage message = session.createTextMessage("Hello world Queues!");
+		// Create ObjMessage.
+		ObjectMessage message = session.createObjectMessage(messageObj);
+
+		// System.out.printf("Sending message '%s' to queue '%s'...%n",
+		// messageObj.message, queue.toString());
+
+		// Send the message
+		// NOTE: JMS Message Priority is not supported by the Solace Message Bus
+		messageProducer.send(queue, message, DeliveryMode.PERSISTENT, Message.DEFAULT_PRIORITY,
+				Message.DEFAULT_TIME_TO_LIVE);
+
+		System.out.println("Sent successfully. Exiting...");
+
+		// Close everything in the order reversed from the opening order
+		// NOTE: as the interfaces below extend AutoCloseable,
+		// with them it's possible to use the "try-with-resources" Java statement
+		// see details at
+		// https://docs.oracle.com/javase/tutorial/essential/exceptions/tryResourceClose.html
+		messageProducer.close();
+		session.close();
+		connection.close();
+		// The initial context needs to be close; it does not extend AutoCloseable
+		initialContext.close();
+
+		return Response.success(null);
+	}
+
+	@GetMapping("/betTest")
+	public Response betTest() {
+		Pool p = new Pool(BetType.PLA, new int[] { 1 }, new String[] { "1", "3", "5" });
+
+		Bet b = new Bet("20210716", "raceIDPlaceHolder", "ST", 2, p);
+
+		ArrayList<Bet> filters = new ArrayList<Bet>();
+		filters.add(b);
+
+		BetFilter bf = new BetFilter("12345678", filters);
+		return Response.success(bf);
+	}
+
+	@PostMapping("/recommendation")
+	public Response recommend(@RequestBody RecommendRequest messageObj) {
+		try {
+			String betAcc = messageObj.bettingID;
+			String meetingID = messageObj.meetingID;
+			RecomendDataProvider rdp = new RecomendDataProvider();
+
+			BetRecommendationCalculator brc = new BetRecommendationCalculator(meetingID, betAcc, rdp.genHorseSelData(),
+					rdp.genBetTypeSelData(), rdp.genRaceTimeProvider(), rdp.genRaceSelector());
+			Recommendation rec;
+			if (messageObj.startTime != null) {
+				// if request has start time, use it
+				rec = brc.recommendate(messageObj.betfilter, RaceTime.convertDate(messageObj.startTime));
+			} else {
+				// if not, use current time
+				rec = brc.recommendate(messageObj.betfilter);
+			}
+
+			return Response.success(rec);
+		} catch (HKJCException e) {
+			return Response.error(e.type, e.getMessage());
+		} catch (Exception e) {
+			return Response.error(500, "Server error: " + e.toString());
+		}
+
+	}
+
+	@PostMapping("/allscore")
+	public Response allScore(@RequestBody RecommendRequest messageObj) {
+		try {
+			String betAcc = messageObj.bettingID;
+			String meetingID = messageObj.meetingID;
+			RecomendDataProvider rdp = new RecomendDataProvider();
+
+			BetRecommendationCalculator brc = new BetRecommendationCalculator(meetingID, betAcc, rdp.genHorseSelData(),
+					rdp.genBetTypeSelData(), rdp.genRaceTimeProvider(), rdp.genRaceSelector());
+
+			// ScoreResult[] rec = brc.getAllScores(messageObj.betfilter,
+			// messageObj.raceNo);
+
+			// return Response.success(new AllScoreResponse(meetingID, messageObj.raceNo,
+			// rec));
+
+			return Response.error(500, "not implemented");
+		} catch (HKJCException e) {
+			return Response.error(e.type, e.getMessage());
+		} catch (Exception e) {
+			return Response.error(500, "Server error: " + e.toString());
+		}
+
+	}
+
+	public static void main(String[] args) {
+		SpringApplication.run(SolMessagerApplication.class, args);
+	}
+
+}
