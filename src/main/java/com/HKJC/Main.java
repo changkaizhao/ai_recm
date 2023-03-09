@@ -1,4 +1,5 @@
 package com.HKJC;
+
 import com.HKJC.BetPool.BetFilter;
 import com.HKJC.Config.Configurator;
 import com.HKJC.Exceptions.HKJCException;
@@ -31,7 +32,6 @@ import org.apache.log4j.*;
 
 import javax.jms.*;
 
-
 import javax.jms.Queue;
 import javax.naming.Context;
 import javax.naming.InitialContext;
@@ -42,8 +42,7 @@ import com.solacesystems.jms.SolConnectionFactory;
 import com.solacesystems.jcsmp.JCSMPProperties;
 import org.ojai.store.DriverManager;
 
-
-public class Main implements Runnable{
+public class Main implements Runnable {
     final static String QUEUE_NAME = Configurator.getInstance().QUEUE_NAME;
 
     // hk/g/prdt/wager/evt/01/upd/ai/bet/recomd_req/{instant_id}/{account_no}/recomd/{status}
@@ -55,13 +54,14 @@ public class Main implements Runnable{
     final static String password = Configurator.getInstance().password;
     final static String vpnName = Configurator.getInstance().vpnName;
 
-
     private CountDownLatch l;
-    public Main(CountDownLatch l){
+
+    public Main(CountDownLatch l) {
         this.l = l;
     }
+
     @Override
-    public void run(){
+    public void run() {
         Logger logger = Logger.getLogger(Main.class);
         try {
             logger.info("Listener start...");
@@ -71,11 +71,12 @@ public class Main implements Runnable{
         }
         this.l.countDown();
     }
-    public static void processBettypeNum(Map<String, Integer> bettypeNum){
+
+    public static void processBettypeNum(Map<String, Integer> bettypeNum) {
         String betKey = "WIN_PLA_W-P";
         String betKey2 = "W-P";
-        for(Map.Entry<String, Integer> entry : bettypeNum.entrySet()){
-            if(entry.getKey().equals(betKey) || entry.getKey().equals(betKey2)){
+        for (Map.Entry<String, Integer> entry : bettypeNum.entrySet()) {
+            if (entry.getKey().equals(betKey) || entry.getKey().equals(betKey2)) {
                 int num = entry.getValue();
                 bettypeNum.put("WIN", num);
                 bettypeNum.put("PLA", num);
@@ -86,18 +87,17 @@ public class Main implements Runnable{
         }
     }
 
-
     private void handleMsg() throws Exception {
         final CountDownLatch latch = new CountDownLatch(1);
 
         Logger logger = Logger.getLogger(Main.class);
-        logger.info("QueueConsumer is connecting to Solace messaging at %s...%n" +  host);
+        logger.info("QueueConsumer is connecting to Solace messaging at %s...%n" + host);
         Connection connection;
         MessageConsumer messageConsumer;
         Session session;
         InitialContext initialContext = null;
 
-        if(Configurator.getInstance().useKerberosAuth){
+        if (Configurator.getInstance().useKerberosAuth) {
 
             SolConnectionFactory factory = SolJmsUtility.createConnectionFactory();
             factory.setHost(Configurator.getInstance().host);
@@ -108,12 +108,11 @@ public class Main implements Runnable{
             /* create the connection */
             connection = factory.createConnection();
 
-
             /* create the session */
             session = connection.createSession(false, Session.CLIENT_ACKNOWLEDGE);
 
             /* set the exception listener */
-//            connection.setExceptionListener(this);
+            // connection.setExceptionListener(this);
 
             /* create the destination */
             Queue destination = session.createQueue(QUEUE_JNDI_NAME);
@@ -121,8 +120,7 @@ public class Main implements Runnable{
             /* create the consumer */
             messageConsumer = session.createConsumer(destination);
 
-
-        }else{
+        } else {
             // setup environment variables for creating of the initial context
             Hashtable<String, Object> env = new Hashtable<String, Object>();
             // use the Solace JNDI initial context factory
@@ -137,25 +135,25 @@ public class Main implements Runnable{
             // Objects.
             initialContext = new InitialContext(env);
             // Lookup the connection factory
-            ConnectionFactory connectionFactory = (ConnectionFactory) initialContext.lookup(CONNECTION_FACTORY_JNDI_NAME);
+            ConnectionFactory connectionFactory = (ConnectionFactory) initialContext
+                    .lookup(CONNECTION_FACTORY_JNDI_NAME);
 
             // Create connection to the Solace router
-            connection =  connectionFactory.createConnection();
+            connection = connectionFactory.createConnection();
 
             // Create a non-transacted, client ACK session.
-//            session = connection.createSession(false, SupportedProperty.SOL_CLIENT_ACKNOWLEDGE);
+            // session = connection.createSession(false,
+            // SupportedProperty.SOL_CLIENT_ACKNOWLEDGE);
             session = connection.createSession(false, Session.CLIENT_ACKNOWLEDGE);
-            logger.info("Connected to the Solace Message VPN '%s' with client username '%s'.%n"+  vpnName + " " +
+            logger.info("Connected to the Solace Message VPN '%s' with client username '%s'.%n" + vpnName + " " +
                     username);
 
             // Lookup the queue.
             Queue queue = (Queue) initialContext.lookup(QUEUE_JNDI_NAME);
 
             // From the session, create a consumer for the destination.
-             messageConsumer = session.createConsumer(queue);
+            messageConsumer = session.createConsumer(queue);
         }
-
-
 
         // Use the anonymous inner class for receiving messages asynchronously
         messageConsumer.setMessageListener((MessageListener) new MessageListener() {
@@ -169,14 +167,14 @@ public class Main implements Runnable{
                 try {
                     long starttime = System.nanoTime();
 
-                    Destination d =  message.getJMSDestination();
+                    Destination d = message.getJMSDestination();
                     messageID = Main.parseInstanceID(d.toString());
                     betAcc = Main.parseAcctID(d.toString());
 
-                    String logPrefix = "[MessageID]:"+messageID;
+                    String logPrefix = "[MessageID]:" + messageID;
 
-                    logger.info(logPrefix +" Received Topic:" + d + " betAccNo:"+betAcc);
-                    if(messageID == null || betAcc == null) {
+                    logger.info(logPrefix + " Received Topic:" + d + " betAccNo:" + betAcc);
+                    if (messageID == null || betAcc == null) {
                         Exception e = new Exception("No valid info of instanceID or betAcc from topic" + d);
                         logger.error(logPrefix + " " + e);
                         message.acknowledge();
@@ -188,9 +186,8 @@ public class Main implements Runnable{
 
                         logger.info(logPrefix + " ObjextMessage received: '%s'%n" + msg.getObject().toString());
 
-
                         SolMessage slm = (SolMessage) msg.getObject();
-//                        instanceID = Main.parseInstanceID(slm.header.event_prefix_topic);
+                        // instanceID = Main.parseInstanceID(slm.header.event_prefix_topic);
 
                         logger.info(logPrefix + " SolMessage received: '%s'" + slm);
 
@@ -208,7 +205,8 @@ public class Main implements Runnable{
                             rr.startTime = slm.start_time;
                             rr.race_id = slm.race_id;
                             Response r = Main.recommend(rr);
-                            Main.publish(session,r.data, r.message, 200, messageID, slm.bet_acc_no, false, slm.request_id);
+                            Main.publish(session, r.data, r.message, 200, messageID, slm.bet_acc_no, false,
+                                    slm.request_id);
                             logger.info(r);
                         } else {
                             rr.bettype_display_num = slm.bettype_display_num;
@@ -216,28 +214,30 @@ public class Main implements Runnable{
                             rr.raceNo = slm.race_no;
                             rr.race_id = slm.race_id;
                             Response r = Main.allScore(rr);
-                            Main.publish(session, r.data, r.message,200, messageID, slm.bet_acc_no, true, slm.request_id);
+                            Main.publish(session, r.data, r.message, 200, messageID, slm.bet_acc_no, true,
+                                    slm.request_id);
                             logger.info(r);
                         }
 
                     } else if (message instanceof TextMessage) {
                         logger.info(logPrefix + " TextMessage received: '%s'%n" + ((TextMessage) message).getText());
 
-                    } else if(message instanceof BytesMessage){
+                    } else if (message instanceof BytesMessage) {
                         logger.info(logPrefix + " BytesMessage received." + message.getPropertyNames());
                         SolMessage slm = null;
-                        try{
-                            BytesMessage msg = (BytesMessage)message;
+                        try {
+                            BytesMessage msg = (BytesMessage) message;
                             byte[] payload = new byte[(int) msg.getBodyLength()];
                             msg.readBytes(payload);
                             String data = new String(payload, StandardCharsets.UTF_8);
 
                             logger.info(logPrefix + " Data Received: " + data);
 
-                            if(Configurator.getInstance().dataProviderType == DataProviderType.JSONFileData){
+                            if (Configurator.getInstance().dataProviderType == DataProviderType.JSONFileData) {
                                 // replace all meeting id and bet acc and race_id
-                                data = DataFilter.replace(data, "meeting_id", "MTG_20210314_0001", "bet_acc_no", "12345678");
-                                if(Configurator.getInstance().Debug){
+                                data = DataFilter.replace(data, "meeting_id", "MTG_20210314_0001", "bet_acc_no",
+                                        "12345678");
+                                if (Configurator.getInstance().Debug) {
                                     logger.info(logPrefix + " Data Replaced: " + data);
                                 }
                             }
@@ -251,7 +251,7 @@ public class Main implements Runnable{
                             rr.betfilter = bf;
                             rr.bettingID = slm.bet_acc_no;
                             rr.meetingID = slm.meeting_id;
-                            float end = (System.nanoTime() - starttime)/(float)1000000.0;
+                            float end = (System.nanoTime() - starttime) / (float) 1000000.0;
                             logger.info(logPrefix + " ⏰[ListenerInitRequest]:" + end + "ms");
                             // TOBE Fixed here ...
                             if (slm.bettype_display_num == null) {
@@ -262,11 +262,12 @@ public class Main implements Runnable{
                                 rr.race_id = slm.race_id;
                                 rr.messageID = messageID;
                                 Response r = Main.recommend(rr);
-                                logger.info(logPrefix +" Successfully processed BetConfirmation API");
-                                Main.publish(session, r.data, r.message, r.code, messageID, betAcc, false, slm.request_id);
+                                logger.info(logPrefix + " Successfully processed BetConfirmation API");
+                                Main.publish(session, r.data, r.message, r.code, messageID, betAcc, false,
+                                        slm.request_id);
 
                             } else {
-                                logger.info(logPrefix + " Request Bettype API" );
+                                logger.info(logPrefix + " Request Bettype API");
                                 rr.bettype_display_num = slm.bettype_display_num;
                                 Main.processBettypeNum(rr.bettype_display_num);
                                 rr.raceNo = slm.race_no;
@@ -274,18 +275,19 @@ public class Main implements Runnable{
                                 rr.messageID = messageID;
                                 Response r = Main.allScore(rr);
                                 logger.info(logPrefix + " Successfully processed bettype API" + r);
-                                Main.publish(session, r.data, r.message,  r.code, messageID, betAcc, true, slm.request_id);
+                                Main.publish(session, r.data, r.message, r.code, messageID, betAcc, true,
+                                        slm.request_id);
                             }
 
-                        }
-                        catch (Exception e){
+                        } catch (Exception e) {
                             StackTraceElement ste = e.getStackTrace()[0];
-                            logger.error(e + " " + ste.getClassName() + " " + ste.getMethodName()+" " + ste.getLineNumber());
-                            Main.publish(session,null, e.getMessage(), 500, messageID, betAcc, false, slm.request_id);
+                            logger.error(e + " " + ste.getClassName() + " " + ste.getMethodName() + " "
+                                    + ste.getLineNumber());
+                            Main.publish(session, null, e.getMessage(), 500, messageID, betAcc, false, slm.request_id);
                         }
-                        float time = (System.nanoTime() - starttime)/(float)1000000.0;
+                        float time = (System.nanoTime() - starttime) / (float) 1000000.0;
                         logger.info(logPrefix + " ⏰[OneMsgProcessingTotal]:" + time + "ms");
-                    }else{
+                    } else {
                         logger.info(logPrefix + "Other type Message received.");
                         logger.info(logPrefix + "Message Content:%n%s%n" + SolJmsUtility.dumpMessage(message));
                     }
@@ -296,14 +298,14 @@ public class Main implements Runnable{
 
                     // latch.countDown(); // unblock the main thread
                 } catch (JMSException ex) {
-                    logger.error("[MessageID]:"+messageID + "Error processing incoming message.");
+                    logger.error("[MessageID]:" + messageID + "Error processing incoming message.");
                     ex.printStackTrace();
-                    try{
+                    try {
                         message.acknowledge();
-                    }catch (Exception e){
+                    } catch (Exception e) {
                         logger.error(e);
                     }
-                    latch.countDown(); // unblock the  thread
+                    latch.countDown(); // unblock the thread
                 }
             }
         });
@@ -324,90 +326,93 @@ public class Main implements Runnable{
         session.close();
         connection.close();
         // The initial context needs to be close; it does not extend AutoCloseable
-        if(!Configurator.getInstance().useKerberosAuth && initialContext != null){
+        if (!Configurator.getInstance().useKerberosAuth && initialContext != null) {
             initialContext.close();
         }
     }
 
-    public static String parseInstanceID(String topic){
+    public static String parseInstanceID(String topic) {
         String instancePattern = "(?<=recomd_req/)(\\w+)(?=/)";
         return DataFilter.find(topic, instancePattern);
     }
 
-    public static String parseAcctID(String topic){
+    public static String parseAcctID(String topic) {
         String acctP = "(?<=recomd_req/\\w+/)(\\w+)(?=/)";
         return DataFilter.find(topic, acctP);
     }
 
-
-    public static void publish(Session session, Serializable data,String err_message, int status, String messageID, String betacc, boolean isBettype, String request_id) {
+    public static void publish(Session session, Serializable data, String err_message, int status, String messageID,
+            String betacc, boolean isBettype, String request_id) {
         long starttime = System.nanoTime();
 
         Logger logger = Logger.getLogger(Main.class);
-        String logPrefix = "[MessageID]:"+messageID;
+        String logPrefix = "[MessageID]:" + messageID;
         try {
 
-//            // Programmatically create the connection factory using default settings
-//            SolConnectionFactory connectionFactory = SolJmsUtility.createConnectionFactory();
-//
-//            if(Configurator.getInstance().useKerberosAuth){
-////                connectionFactory.setSSLKeyStore(Configurator.getInstance().SSL_TRUST_STORE);
-////                connectionFactory.setSSLKeyStoreFormat(Configurator.getInstance().SSL_TRUST_STORE_FORMAT);
-////                connectionFactory.setSSLKeyStorePassword(Configurator.getInstance().SSL_TRUST_STORE_PASSWORD);
-////                connectionFactory.setSSLValidateCertificate(Configurator.getInstance().SSL_VALIDATE_CERTIFICATE);
-//
-//                connectionFactory.setHost(Configurator.getInstance().host);
-//                connectionFactory.setVPN(vpnName);
-//                connectionFactory.setAuthenticationScheme(JCSMPProperties.AUTHENTICATION_SCHEME_GSS_KRB);
-//                connectionFactory.setReconnectRetries(600);
-//            }else{
-//                connectionFactory.setHost(host);
-//                connectionFactory.setVPN(vpnName);
-//                connectionFactory.setUsername(username);
-//                connectionFactory.setPassword(password);
-//            }
-//
-//
-//            // Create connection to the Solace router
-//            Connection connection = connectionFactory.createConnection();
-//
-//            // Create a non-transacted, auto ACK session.
-//            Session session = connection.createSession(false, Session.AUTO_ACKNOWLEDGE);
+            // // Programmatically create the connection factory using default settings
+            // SolConnectionFactory connectionFactory =
+            // SolJmsUtility.createConnectionFactory();
+            //
+            // if(Configurator.getInstance().useKerberosAuth){
+            //// connectionFactory.setSSLKeyStore(Configurator.getInstance().SSL_TRUST_STORE);
+            //// connectionFactory.setSSLKeyStoreFormat(Configurator.getInstance().SSL_TRUST_STORE_FORMAT);
+            //// connectionFactory.setSSLKeyStorePassword(Configurator.getInstance().SSL_TRUST_STORE_PASSWORD);
+            //// connectionFactory.setSSLValidateCertificate(Configurator.getInstance().SSL_VALIDATE_CERTIFICATE);
+            //
+            // connectionFactory.setHost(Configurator.getInstance().host);
+            // connectionFactory.setVPN(vpnName);
+            // connectionFactory.setAuthenticationScheme(JCSMPProperties.AUTHENTICATION_SCHEME_GSS_KRB);
+            // connectionFactory.setReconnectRetries(600);
+            // }else{
+            // connectionFactory.setHost(host);
+            // connectionFactory.setVPN(vpnName);
+            // connectionFactory.setUsername(username);
+            // connectionFactory.setPassword(password);
+            // }
+            //
+            //
+            // // Create connection to the Solace router
+            // Connection connection = connectionFactory.createConnection();
+            //
+            // // Create a non-transacted, auto ACK session.
+            // Session session = connection.createSession(false, Session.AUTO_ACKNOWLEDGE);
 
             logger.info(logPrefix + " Connected to the Solace Message VPN '%s' with client username " + vpnName + " " +
                     username);
-            float endConnectiontime = (System.nanoTime() - starttime)/(float)1000000.0;
+            float endConnectiontime = (System.nanoTime() - starttime) / (float) 1000000.0;
             logger.info(logPrefix + " ⏰[SolaceConnectionTime]:" + endConnectiontime + "ms");
 
-
             String dataString = "";
-            if(data instanceof String){
-                dataString = (String)data;
+            if (data instanceof String) {
+                dataString = (String) data;
             } else if (data == null && status != 200) {
                 dataString = err_message;
 
-            } else if(data == null){
+            } else if (data == null) {
                 dataString = err_message;
 
-            }else{
+            } else {
                 ObjectMapper mapper = new ObjectMapper();
                 dataString = mapper.writeValueAsString(data);
 
-                try{
+                try {
                     Recommendation r = (Recommendation) data;
-                    if (r.recommendations.bet_type.length != 0 || r.recommendations.betslip.length != 0 || r.recommendations.bet_confirmation.length !=0 ){
-                        //if empty not save
-                        String api = isBettype ? Configurator.getInstance().api_saveBettype : Configurator.getInstance().api_saveHorse;
+                    if (r.recommendations.bet_type.length != 0 || r.recommendations.betslip.length != 0
+                            || r.recommendations.bet_confirmation.length != 0) {
+                        // if empty not save
+                        String api = isBettype ? Configurator.getInstance().api_saveBettype
+                                : Configurator.getInstance().api_saveHorse;
                         String dataStringToSave = dataString;
-                        if(!isBettype){
+                        if (!isBettype) {
                             // recommendate add race interval data
                             dataStringToSave = StringUtils.chop(dataStringToSave);
-                            dataStringToSave = dataStringToSave + "," + GlobalAttrRaceInterval.getInstance().toString() + "}";
+                            dataStringToSave = dataStringToSave + "," + GlobalAttrRaceInterval.getInstance().toString()
+                                    + "}";
                         }
                         Main.saveToServer(dataStringToSave, api, messageID);
                     }
-                }catch (Exception e){
-                    logger.info(logPrefix +  " can't save to server, error:" + e);
+                } catch (Exception e) {
+                    logger.info(logPrefix + " can't save to server, error:" + e);
                 }
             }
 
@@ -416,25 +421,23 @@ public class Main implements Runnable{
 
             Topic topic = session.createTopic(topic_name);
 
-
             // Create the message producer for the created topic
             MessageProducer messageProducer = session.createProducer(topic);
 
             // Create the message
             // TextMessage message = session.createTextMessage("Hello world!");
-//            ObjectMessage message = session.createObjectMessage(data);
+            // ObjectMessage message = session.createObjectMessage(data);
             BytesMessage message = session.createBytesMessage();
 
-
-            if(Configurator.getInstance().dataProviderType == DataProviderType.JSONFileData){
+            if (Configurator.getInstance().dataProviderType == DataProviderType.JSONFileData) {
                 // replace all meeting id and bet acc and race_id
                 dataString = DataFilter.reverse(dataString);
 
             }
             logger.info(logPrefix + " Reply topic: " + topic_name);
 
-            if(dataString.equals("OK")){
-                Recommendation  r = Main.emptyReco(isBettype, betacc);
+            if (dataString.equals("OK")) {
+                Recommendation r = Main.emptyReco(isBettype, betacc);
                 ObjectMapper mapper = new ObjectMapper();
                 dataString = mapper.writeValueAsString(r);
             }
@@ -442,13 +445,12 @@ public class Main implements Runnable{
             dataString = StringUtils.chop(dataString);
             dataString = dataString + "," + "\"request_id\":\"" + request_id + "\"}";
 
-
-            if(status == 200){
-                logger.info( logPrefix +  " Reply data: " + dataString);
-                //            message.writeUTF(dataString);
+            if (status == 200) {
+                logger.info(logPrefix + " Reply data: " + dataString);
+                // message.writeUTF(dataString);
                 message.writeBytes(dataString.getBytes(StandardCharsets.UTF_8));
-            }else{
-               logger.info(logPrefix +  " Error data not replyed:"+ status + " " + dataString);
+            } else {
+                logger.info(logPrefix + " Error data not replyed:" + status + " " + dataString);
             }
 
             // System.out.printf("Sending message '%s' to topic '%s'...%n",
@@ -457,7 +459,7 @@ public class Main implements Runnable{
             // NOTE: JMS Message Priority is not supported by the Solace Message Bus
             messageProducer.send(topic, message, DeliveryMode.NON_PERSISTENT,
                     Message.DEFAULT_PRIORITY, Message.DEFAULT_TIME_TO_LIVE);
-            logger.info(logPrefix +  " Sent successfully. Exiting...");
+            logger.info(logPrefix + " Sent successfully. Exiting...");
 
             // Close everything in the order reversed from the opening order
             // NOTE: as the interfaces below extend AutoCloseable,
@@ -465,36 +467,36 @@ public class Main implements Runnable{
             // see details at
             // https://docs.oracle.com/javase/tutorial/essential/exceptions/tryResourceClose.html
             messageProducer.close();
-//            session.close();
-//            connection.close();
+            // session.close();
+            // connection.close();
         } catch (Exception e) {
             StackTraceElement ste = e.getStackTrace()[0];
-            logger.error(logPrefix + " "+ e + " " + ste.getClassName() + " " + ste.getMethodName()+" " + ste.getLineNumber());
+            logger.error(logPrefix + " " + e + " " + ste.getClassName() + " " + ste.getMethodName() + " "
+                    + ste.getLineNumber());
         }
 
-        float time = (System.nanoTime() - starttime)/(float)1000000.0;
+        float time = (System.nanoTime() - starttime) / (float) 1000000.0;
         logger.info(logPrefix + " ⏰[MsgPublishingTotal]:" + time + "ms");
 
     }
 
     public static Response recommend(RecommendRequest messageObj) {
-        String logPrefix = "[MessageID]:"+ messageObj.messageID;
-        Logger logger  = Logger.getLogger(Main.class);
+        String logPrefix = "[MessageID]:" + messageObj.messageID;
+        Logger logger = Logger.getLogger(Main.class);
 
         try {
             String betAcc = messageObj.bettingID;
             String meetingID = messageObj.meetingID;
             long starttime = System.nanoTime();
             RecomendDataProvider rdp = new RecomendDataProvider(meetingID, betAcc, messageObj.messageID, -1);
-            float time = (System.nanoTime() - starttime)/(float)1000000.0;
+            float time = (System.nanoTime() - starttime) / (float) 1000000.0;
             logger.info(logPrefix + "  ⏰[DataPrepareTotalTime]:" + time + "ms");
 
             starttime = System.nanoTime();
             BetRecommendationCalculator brc = new BetRecommendationCalculator(meetingID, betAcc, rdp);
             Recommendation rec;
-            time = (System.nanoTime() - starttime)/(float)1000000.0;
+            time = (System.nanoTime() - starttime) / (float) 1000000.0;
             logger.info(logPrefix + " ⏰[CalculationInitTime]:" + time + "ms");
-
 
             if (messageObj.startTime != null) {
                 // if request has start time, use it
@@ -504,130 +506,135 @@ public class Main implements Runnable{
                 rec = brc.recommendate(messageObj);
             }
 
-
-            time = (System.nanoTime() - starttime)/(float)1000000.0;
+            time = (System.nanoTime() - starttime) / (float) 1000000.0;
             logger.info(logPrefix + " ⏰[CalculationTotalTime]:" + time + "ms");
             return Response.success(rec);
         } catch (HKJCException e) {
             StackTraceElement ste = e.getStackTrace()[0];
-            logger.error(logPrefix + " " + e + " " + ste.getClassName() + " " + ste.getMethodName()+" " + ste.getLineNumber());
-            if(e.type == 501 || e.type == 500){
+            logger.error(logPrefix + " " + e + " " + ste.getClassName() + " " + ste.getMethodName() + " "
+                    + ste.getLineNumber());
+            if (e.type == 501 || e.type == 500) {
                 Recommendation rec = Main.emptyReco(false, messageObj.bettingID);
                 return Response.success(rec);
             }
             return Response.error(e.type, e.getMessage());
         } catch (Exception e) {
             StackTraceElement ste = e.getStackTrace()[0];
-            logger.error(logPrefix + " " + e + " " + ste.getClassName() + " " + ste.getMethodName()+" " + ste.getLineNumber());
+            logger.error(logPrefix + " " + e + " " + ste.getClassName() + " " + ste.getMethodName() + " "
+                    + ste.getLineNumber());
             return Response.error(500, "Server error: " + e.toString());
         }
 
     }
 
-    public static Recommendation emptyReco(boolean isBettype, String bettingID){
+    public static Recommendation emptyReco(boolean isBettype, String bettingID) {
         Recommendation rec = new Recommendation(bettingID);
         RecommendationInternalData rid = null;
-        if(isBettype){
-            rid = new RecommendationInternalData(new RecoBet[]{});
-        }else{
-            rid = new RecommendationInternalData(new RecoBet[]{},new RecoBet[]{});
+        if (isBettype) {
+            rid = new RecommendationInternalData(new RecoBet[] {});
+        } else {
+            rid = new RecommendationInternalData(new RecoBet[] {}, new RecoBet[] {});
         }
         rec.recommendations = rid;
         return rec;
     }
+
     public static Response allScore(RecommendRequest messageObj) {
-        String logPrefix = "[MessageID]:"+ messageObj.messageID;
-        Logger logger  = Logger.getLogger(Main.class);
+        String logPrefix = "[MessageID]:" + messageObj.messageID;
+        Logger logger = Logger.getLogger(Main.class);
 
         try {
             String betAcc = messageObj.bettingID;
             String meetingID = messageObj.meetingID;
             long starttime = System.nanoTime();
-            RecomendDataProvider rdp = new RecomendDataProvider(meetingID, betAcc, messageObj.messageID, messageObj.raceNo);
-            float time = (System.nanoTime() - starttime)/(float)1000000.0;
+            RecomendDataProvider rdp = new RecomendDataProvider(meetingID, betAcc, messageObj.messageID,
+                    messageObj.raceNo);
+            float time = (System.nanoTime() - starttime) / (float) 1000000.0;
             logger.info(logPrefix + "  ⏰[DataPrepareTotalTime]:" + time + "ms");
 
             starttime = System.nanoTime();
             BetRecommendationCalculator brc = new BetRecommendationCalculator(meetingID, betAcc, rdp);
-            time = (System.nanoTime() - starttime)/(float)1000000.0;
+            time = (System.nanoTime() - starttime) / (float) 1000000.0;
             logger.info(logPrefix + " ⏰[CalculationInitTime]:" + time + "ms");
 
             Recommendation rec = brc.getAllScores(messageObj);
 
-            time = (System.nanoTime() - starttime)/(float)1000000.0;
+            time = (System.nanoTime() - starttime) / (float) 1000000.0;
             logger.info(logPrefix + " ⏰[CalculationTotalTime]:" + time + "ms");
             return Response.success(rec);
         } catch (HKJCException e) {
             StackTraceElement ste = e.getStackTrace()[0];
-            logger.error(logPrefix + " " + e + " " + ste.getClassName() + " " + ste.getMethodName()+" " + ste.getLineNumber());
-            if(e.type == 501 || e.type == 500){
+            logger.error(logPrefix + " " + e + " " + ste.getClassName() + " " + ste.getMethodName() + " "
+                    + ste.getLineNumber());
+            if (e.type == 501 || e.type == 500) {
                 Recommendation rec = Main.emptyReco(true, messageObj.bettingID);
                 return Response.success(rec);
             }
             return Response.error(e.type, e.getMessage());
         } catch (Exception e) {
             StackTraceElement ste = e.getStackTrace()[0];
-            logger.error(logPrefix + " " + e + " " + ste.getClassName() + " " + ste.getMethodName()+" " + ste.getLineNumber());
+            logger.error(logPrefix + " " + e + " " + ste.getClassName() + " " + ste.getMethodName() + " "
+                    + ste.getLineNumber());
             return Response.error(500, "Server error: " + e.toString());
         }
 
     }
 
-
     // save calculator results to backup server
-    public static void saveToServer(String data, String api, String messageID){
-        Logger logger  = Logger.getLogger(Main.class);
+    public static void saveToServer(String data, String api, String messageID) {
+        Logger logger = Logger.getLogger(Main.class);
         long starttime = System.nanoTime();
-        try{
-//            URL url = new URL(Configurator.getInstance().genAPI(api));
-//            URLConnection con = url.openConnection();
-//            HttpURLConnection http = (HttpURLConnection) con;
-//            http.setRequestMethod("POST");
-//            http.setDoOutput(true);
-//
-//            byte[] out = data.getBytes(StandardCharsets.UTF_8);
-//            http.setFixedLengthStreamingMode(out.length);
-//            http.setRequestProperty("Content-Type", "application/json; charset=UTF-8");
-//            http.connect();
-//            try(OutputStream os = http.getOutputStream()){
-//                os.write(out);
-//            }
-//
-//            http.disconnect();
-//            logger.info("[MessageID]:"+ messageID + " success save result to server.");
+        try {
+            // URL url = new URL(Configurator.getInstance().genAPI(api));
+            // URLConnection con = url.openConnection();
+            // HttpURLConnection http = (HttpURLConnection) con;
+            // http.setRequestMethod("POST");
+            // http.setDoOutput(true);
+            //
+            // byte[] out = data.getBytes(StandardCharsets.UTF_8);
+            // http.setFixedLengthStreamingMode(out.length);
+            // http.setRequestProperty("Content-Type", "application/json; charset=UTF-8");
+            // http.connect();
+            // try(OutputStream os = http.getOutputStream()){
+            // os.write(out);
+            // }
+            //
+            // http.disconnect();
+            // logger.info("[MessageID]:"+ messageID + " success save result to server.");
 
-        }catch (Exception e) {
+        } catch (Exception e) {
             logger.error(e);
         }
 
-        float time = (System.nanoTime() - starttime)/(float)1000000.0;
-        logger.info("[MessageID]:"+ messageID  + " ⏰[SaveToServerTime]:" + time + "ms");
+        float time = (System.nanoTime() - starttime) / (float) 1000000.0;
+        logger.info("[MessageID]:" + messageID + " ⏰[SaveToServerTime]:" + time + "ms");
     }
 
-    public static void initLogger(){
-        System.setProperty("java.security.auth.login.config","SolaceGSSConfig/jaas.conf");
+    public static void initLogger() {
+        System.setProperty("java.security.auth.login.config", "SolaceGSSConfig/jaas.conf");
         String hostName = System.getenv("HOSTNAME");
-        if(hostName != null){
+        if (hostName != null) {
             System.setProperty("HOSTNAME", hostName);
         }
         Logger rootLogger = Logger.getRootLogger();
         rootLogger.setLevel(Level.INFO);
 
         PatternLayout layout = new PatternLayout();
-        layout.setConversionPattern("[%-5p] %d(%r) HOST:"+ hostName+" --> [%t] %l: %m %x %n");
-        try{
-            DailyRollingFileAppender drfa = new DailyRollingFileAppender(layout, "./log/airecw-"+hostName+".log", "'.'yyyy-MM-dd");
+        layout.setConversionPattern("[%-5p] %d(%r) HOST:" + hostName + " --> [%t] %l: %m %x %n");
+        try {
+            DailyRollingFileAppender drfa = new DailyRollingFileAppender(layout, "./log/airecw-" + hostName + ".log",
+                    "'.'yyyy-MM-dd");
             drfa.setAppend(true);
             drfa.setImmediateFlush(true);
             rootLogger.addAppender(drfa);
-        }catch (Exception e){
+        } catch (Exception e) {
             rootLogger.error(e);
             rootLogger.error(new Exception("File logger set not successfully."));
             return;
         }
     }
 
-    public static void initOjaiDBPool(int pool_size){
+    public static void initOjaiDBPool(int pool_size) {
         OjaiDBStorePool.getInstance().createOjaiDBsForBetTypePool(pool_size);
         OjaiDBStorePool.getInstance().createOjaiDBsForHorsePool(pool_size);
         OjaiDBStorePool.getInstance().createOjaiDBsForRaceProxiPool(pool_size);
@@ -636,9 +643,9 @@ public class Main implements Runnable{
     public static void main(String[] args) {
         Main.initLogger();
         Logger logger = Logger.getLogger(Main.class);
-        try{
+        try {
             Configurator.getInstance().init();
-        }catch (Exception e){
+        } catch (Exception e) {
             logger.error(new Error("one or more env not set up"));
             return;
         }
@@ -647,8 +654,8 @@ public class Main implements Runnable{
         Main.initOjaiDBPool(tNo);
 
         final CountDownLatch mainLatch = new CountDownLatch(tNo);
-        logger.info("Start App with "+ tNo+" threads...");
-        for (int i = 0; i < tNo; i++){
+        logger.info("Start App with " + tNo + " threads...");
+        for (int i = 0; i < tNo; i++) {
             Main listener = new Main(mainLatch);
             Thread t = new Thread(listener);
             t.start();
