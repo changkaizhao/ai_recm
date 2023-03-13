@@ -348,6 +348,7 @@ public class FileDataProvider extends DataProvider {
         Logger logger = Logger.getLogger(FileDataProvider.class);
 
         ObjectMapper objectMapper = new ObjectMapper()
+                .configure(DeserializationFeature.ACCEPT_SINGLE_VALUE_AS_ARRAY, true);
                 .configure(DeserializationFeature.READ_UNKNOWN_ENUM_VALUES_USING_DEFAULT_VALUE, true)
                 .configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false);
         DateFormat df = new SimpleDateFormat(RaceTime.TimePattern);
