@@ -179,14 +179,14 @@ public class RecomendDataProvider {
                     }
                 }
 
-                int race_range = rangeMap.get(race_no);
-                logger.info("get win_odd_top1_range:" + race_range + " with race_no:" + race_no + " from data winodds");
+
                 // find range and raceNo matched bettype
                 ArrayList<BetTypeSelection> btList = new ArrayList<>();
                 for (int i = 0; i < this.dp.betTypeOdds.size(); i++) {
                     BetTypeOdd bto = this.dp.betTypeOdds.get(i);
-
                     int race_no = bto.leg_rs_no;
+                    int race_range = rangeMap.get(race_no);
+                    logger.info("get win_odd_top1_range:" + race_range + " with race_no:" + race_no + " from data winodds");
                     int range = bto.win_odds_top1_range;
                     if (race_range == range) {
                         btList.add(new BetTypeSelection(bto.mtg_id, bto.leg_rs_no, bto.bet_type, bto.predict));
