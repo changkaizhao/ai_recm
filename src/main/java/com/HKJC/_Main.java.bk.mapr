@@ -1,0 +1,52 @@
+package com.HKJC;
+
+import org.apache.log4j.*;
+import com.HKJC.Config.Configurator;
+import com.HKJC.OjaiDB.db.OjaiDBStorePool;
+
+public class Main {
+    public static void initLogger() {
+        System.setProperty("java.security.auth.login.config", "SolaceGSSConfig/jaas.conf");
+        String hostName = System.getenv("HOSTNAME");
+        if (hostName != null) {
+            System.setProperty("HOSTNAME", hostName);
+        }
+        Logger rootLogger = Logger.getRootLogger();
+        rootLogger.setLevel(Level.INFO);
+
+        PatternLayout layout = new PatternLayout();
+        layout.setConversionPattern("[%-5p] %d(%r) HOST:" + hostName + " --> [%t] %l: %m %x %n");
+        try {
+            DailyRollingFileAppender drfa = new DailyRollingFileAppender(layout, "./log/airecw-" + hostName + ".log",
+                    "'.'yyyy-MM-dd");
+            drfa.setAppend(true);
+            drfa.setImmediateFlush(true);
+            rootLogger.addAppender(drfa);
+        } catch (Exception e) {
+            rootLogger.error(e);
+            rootLogger.error(new Exception("File logger set not successfully."));
+            return;
+        }
+    }
+
+    public static void initOjaiDBPool(int pool_size) {
+        OjaiDBStorePool.getInstance().createOjaiDBsForBetTypePool(pool_size);
+        OjaiDBStorePool.getInstance().createOjaiDBsForHorsePool(pool_size);
+        OjaiDBStorePool.getInstance().createOjaiDBsForRaceProxiPool(pool_size);
+    }
+
+    public static void main(String[] args) {
+        Main.initLogger();
+        Logger logger = Logger.getLogger(Main.class);
+        try {
+            Configurator.getInstance().init();
+        } catch (Exception e) {
+            logger.error(new Error("one or more env not set up"));
+            return;
+        }
+        int tNo = Configurator.getInstance().CPUNum;
+
+        Main.initOjaiDBPool(tNo);
+
+    }
+}

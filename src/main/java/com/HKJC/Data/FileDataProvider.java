@@ -64,6 +64,8 @@ public class FileDataProvider extends DataProvider {
                 this.checkRacepool(logger, messageID);
                 float end = (System.nanoTime() - start) / (float) 1000000.0;
                 logger.info("[MessageID]:" + messageID + "  ⏰[RacePool]:" + end + "ms");
+                String racepoolStr = objectMapper.writeValueAsString(this.racepool);
+                logger.info("[MessageID]:" + messageID + " RacePool: " + racepoolStr);
             } catch (Exception e) {
                 logger.error(e);
             }
@@ -77,6 +79,8 @@ public class FileDataProvider extends DataProvider {
                                 RaceTimeData[].class));
                 float end = (System.nanoTime() - start) / (float) 1000000.0;
                 logger.info("[MessageID]:" + messageID + "  ⏰[RaceTimes]:" + end + "ms");
+                String dataStr = objectMapper.writeValueAsString(this.raceTimes);
+                logger.info("[MessageID]:" + messageID + " RaceTimes: " + dataStr);
             } catch (Exception e) {
                 logger.error(e);
             }
@@ -90,6 +94,8 @@ public class FileDataProvider extends DataProvider {
                                 WinOdd[].class));
                 float end = (System.nanoTime() - start) / (float) 1000000.0;
                 logger.info("[MessageID]:" + messageID + "  ⏰[WinOdds]:" + end + "ms");
+                String dataStr = objectMapper.writeValueAsString(this.winOdds);
+                logger.info("[MessageID]:" + messageID + " winOdds: " + dataStr);
             } catch (Exception e) {
                 logger.error(e);
             }
@@ -102,6 +108,8 @@ public class FileDataProvider extends DataProvider {
                         CWAGroup[].class));
                 float end = (System.nanoTime() - start) / (float) 1000000.0;
                 logger.info("[MessageID]:" + messageID + "  ⏰[CWAGroup]:" + end + "ms");
+                String dataStr = objectMapper.writeValueAsString(this.cwaGroup);
+                logger.info("[MessageID]:" + messageID + " cwaGroup: " + dataStr);
             } catch (Exception e) {
                 logger.error(e);
             }
@@ -115,6 +123,8 @@ public class FileDataProvider extends DataProvider {
                         Runner[].class));
                 float end = (System.nanoTime() - start) / (float) 1000000.0;
                 logger.info("[MessageID]:" + messageID + "  ⏰[Runner]:" + end + "ms");
+                String dataStr = objectMapper.writeValueAsString(this.runners);
+                logger.info("[MessageID]:" + messageID + " runners: " + dataStr);
             } catch (Exception e) {
                 logger.error(e);
             }
@@ -140,6 +150,8 @@ public class FileDataProvider extends DataProvider {
                 this.raceOdds = rpds.findDTO(meeting_id, acc_id);
                 float end = (System.nanoTime() - start) / (float) 1000000.0;
                 logger.info("[MessageID]:" + messageID + "  ⏰[FetchingRaceProximityData]:" + end + "ms");
+                String dataStr = objectMapper.writeValueAsString(this.raceOdds);
+                logger.info("[MessageID]:" + messageID + " RaceProxi: " + dataStr);
             } catch (Exception e) {
                 logger.error(e);
             }
@@ -157,8 +169,8 @@ public class FileDataProvider extends DataProvider {
                 this.betTypeOdds = btds.findDTO(meeting_id, acc_id);
                 float end = (System.nanoTime() - start) / (float) 1000000.0;
                 logger.info("[MessageID]:" + messageID + "  ⏰[FetchingBettypeData]:" + end + "ms");
-                // JSONArray bettypeDataArray = DataProvider.getContent(bettypeData);
-                // return bettypeDataArray;
+                String dataStr = objectMapper.writeValueAsString(this.betTypeOdds);
+                logger.info("[MessageID]:" + messageID + " BetType: " + dataStr);
             } catch (Exception e) {
                 logger.error(e);
             }
@@ -175,8 +187,8 @@ public class FileDataProvider extends DataProvider {
 
                 float end = (System.nanoTime() - start) / (float) 1000000.0;
                 logger.info("[MessageID]:" + messageID + "  ⏰[FetchingHorseData]:" + end + "ms");
-                // JSONArray horseDataArray = DataProvider.getContent(horseData);
-                // return horseDataArray;
+                String dataStr = objectMapper.writeValueAsString(this.horseOdds);
+                logger.info("[MessageID]:" + messageID + " Horse: " + dataStr);
             } catch (Exception e) {
                 logger.error(e);
             }
@@ -207,7 +219,7 @@ public class FileDataProvider extends DataProvider {
     }
 
     // filter plain json data with no more embeded { } structure
-    private void asyncFilterObjByRaceNo(String messageID) throws Exception {
+    private void asyncFilterObjByRaceNo(String messageID, ObjectMapper objectMapper) throws Exception {
         Logger logger = Logger.getLogger(FileDataProvider.class);
         ExecutorService file_load_executor = Executors.newFixedThreadPool(4);
 
@@ -225,6 +237,8 @@ public class FileDataProvider extends DataProvider {
                 this.winOdds = n;
                 float end = (System.nanoTime() - start) / (float) 1000000.0;
                 logger.info("[MessageID]:" + messageID + "  ⏰[filterWinOdds]:" + end + "ms");
+                String dataStr = objectMapper.writeValueAsString(this.winOdds);
+                logger.info("[MessageID]:" + messageID + "After filter winOdds: " + dataStr);
             } catch (Exception e) {
                 logger.error(e);
             }
@@ -244,6 +258,8 @@ public class FileDataProvider extends DataProvider {
                 this.runners = n;
                 float end = (System.nanoTime() - start) / (float) 1000000.0;
                 logger.info("[MessageID]:" + messageID + "  ⏰[fitlerRunners]:" + end + "ms");
+                String dataStr = objectMapper.writeValueAsString(this.runners);
+                logger.info("[MessageID]:" + messageID + "After filter runners: " + dataStr);
             } catch (Exception e) {
                 logger.error(e);
             }
@@ -271,6 +287,8 @@ public class FileDataProvider extends DataProvider {
                 this.horseOdds = n;
                 float end = (System.nanoTime() - start) / (float) 1000000.0;
                 logger.info("[MessageID]:" + messageID + "  ⏰[filterHorse]:" + end + "ms");
+                String dataStr = objectMapper.writeValueAsString(this.horseOdds);
+                logger.info("[MessageID]:" + messageID + "After filter Horse: " + dataStr);
             } catch (Exception e) {
                 logger.error(e);
             }
@@ -299,6 +317,8 @@ public class FileDataProvider extends DataProvider {
                 this.betTypeOdds = n;
                 float end = (System.nanoTime() - start) / (float) 1000000.0;
                 logger.info("[MessageID]:" + messageID + "  ⏰[filterBettype]:" + end + "ms");
+                String dataStr = objectMapper.writeValueAsString(this.betTypeOdds);
+                logger.info("[MessageID]:" + messageID + "After filter BetType: " + dataStr);
             } catch (Exception e) {
                 logger.error(e);
             }
@@ -407,7 +427,7 @@ public class FileDataProvider extends DataProvider {
         // filter winodds runner by race_no
         // filter horse bettype strin by race_no
         // obj mapping bettype and horse
-        // this.asyncFilterObjByRaceNo(messageID, objectMapper, horseStr, betTypeStr);
+        this.asyncFilterObjByRaceNo(messageID, objectMapper);
 
         // ========================================================================================
         if (this.winOdds == null || this.winOdds.size() == 0) {
@@ -419,7 +439,7 @@ public class FileDataProvider extends DataProvider {
                     "No runners after filter with raceNo: " + this.race_no + " meetingID:" + meeting_id);
         }
         // ==================================== API from model
-        // ===================================================
+        // ==============================
         if (this.betTypeOdds == null || this.betTypeOdds.size() == 0) {
             throw new HKJCException(501, "No betTypeOdds get from " + Configurator.getInstance().api_bettype
                     + " meetingID:" + meeting_id + " betAcc:" + acc_id);

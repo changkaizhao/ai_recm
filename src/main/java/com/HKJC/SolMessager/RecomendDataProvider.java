@@ -15,24 +15,23 @@ import com.HKJC.RatingCalculator.HorseSelection;
 import com.HKJC.Config.Configurator;
 import org.apache.log4j.Logger;
 
-
 public class RecomendDataProvider {
 
     public DataProvider dp;
 
-    public RecomendDataProvider(String meeting_id, String acc_id, String messageID, int race_no) throws Exception{
+    public RecomendDataProvider(String meeting_id, String acc_id, String messageID, int race_no) throws Exception {
         DataProviderType dpt = Configurator.getInstance().dataProviderType;
         switch (dpt) {
             case JSONFileData: {
                 this.dp = new JsonDataProvider(race_no);
                 break;
             }
-            case API:{
+            case API: {
                 this.dp = new APIDataProvider(meeting_id, acc_id, messageID, race_no);
                 break;
             }
 
-            case FileData:{
+            case FileData: {
                 this.dp = new FileDataProvider(meeting_id, acc_id, messageID, race_no);
                 break;
             }
@@ -42,7 +41,7 @@ public class RecomendDataProvider {
         }
     }
 
-    public HorseSelection[] genHorseSelData()  {
+    public HorseSelection[] genHorseSelData() {
         HorseSelection[] hs;
         switch (Configurator.getInstance().dataProviderType) {
             case API:
@@ -51,9 +50,9 @@ public class RecomendDataProvider {
                 Logger logger = Logger.getLogger(RecomendDataProvider.class);
                 HashMap<Integer, HashMap<String, String>> group = new HashMap<Integer, HashMap<String, String>>();
 
-                if(this.dp.cwaGroup == null || this.dp.cwaGroup.size() == 0){
+                if (this.dp.cwaGroup == null || this.dp.cwaGroup.size() == 0) {
                     group = null;
-                }else{
+                } else {
                     for (int i = 0; i < this.dp.cwaGroup.size(); i++) {
                         int race_no = this.dp.cwaGroup.get(i).leg_rs_no;
                         if (!group.containsKey(race_no)) {
@@ -64,7 +63,6 @@ public class RecomendDataProvider {
                     }
                 }
 
-
                 ArrayList<HorseSelection> hsList = new ArrayList<>();
 
                 for (int i = 0; i < this.dp.horseOdds.size(); i++) {
@@ -73,32 +71,34 @@ public class RecomendDataProvider {
                     int winOddOrder = this.dp.horseOdds.get(i).win_odds_order;
 
                     WinOdd wo = null;
-                    for(int j = 0 ; j < this.dp.winOdds.size();j++){
-                        if(this.dp.winOdds.get(j).card_no == Integer.parseInt(card_no)  && this.dp.winOdds.get(j).leg_rs_no == race_no){
+                    for (int j = 0; j < this.dp.winOdds.size(); j++) {
+                        if (this.dp.winOdds.get(j).card_no == Integer.parseInt(card_no)
+                                && this.dp.winOdds.get(j).leg_rs_no == race_no) {
                             wo = this.dp.winOdds.get(j);
                             break;
                         }
                     }
-                    if(wo != null && wo.win_odds_order == winOddOrder){
+                    if (wo != null && wo.win_odds_order == winOddOrder) {
                         String gs = "";
-                        if(group != null){
-                            //[TODO]roby
+                        if (group != null) {
+                            // [TODO]roby
                             // fix this hardcode in the future....
-                            try{
-                                gs =  group.get(race_no).get(card_no);
-                            }catch (Exception e){
+                            try {
+                                gs = group.get(race_no).get(card_no);
+                            } catch (Exception e) {
                                 gs = "";
                             }
                         }
                         // filter out horses with undeclared
                         RunnerStatus rs = RunnerStatus.UNDEFINED;
-                        for(int ir = 0;ir < this.dp.runners.size();ir++){
-                            if(this.dp.runners.get(ir).leg_rs_no == race_no && this.dp.runners.get(ir).card_no.equals(card_no)){
+                        for (int ir = 0; ir < this.dp.runners.size(); ir++) {
+                            if (this.dp.runners.get(ir).leg_rs_no == race_no
+                                    && this.dp.runners.get(ir).card_no.equals(card_no)) {
                                 rs = this.dp.runners.get(ir).hrs_status;
                                 break;
                             }
                         }
-                        if(rs == RunnerStatus.Declared){
+                        if (rs == RunnerStatus.Declared) {
                             hsList.add(new HorseSelection(this.dp.horseOdds.get(i).mtg_id,
                                     card_no,
                                     race_no,
@@ -146,6 +146,8 @@ public class RecomendDataProvider {
 
     public BetTypeSelection[] genBetTypeSelData() throws Exception {
         BetTypeSelection[] bs;
+        Logger logger = Logger.getLogger(RecomendDataProvider.class);
+
         switch (Configurator.getInstance().dataProviderType) {
             case API:
             case FileData:
@@ -177,6 +179,8 @@ public class RecomendDataProvider {
                     }
                 }
 
+                int race_range = rangeMap.get(race_no);
+                logger.info("get win_odd_top1_range:" + race_range + " with race_no:" + race_no + " from data winodds");
                 // find range and raceNo matched bettype
                 ArrayList<BetTypeSelection> btList = new ArrayList<>();
                 for (int i = 0; i < this.dp.betTypeOdds.size(); i++) {
@@ -184,7 +188,7 @@ public class RecomendDataProvider {
 
                     int race_no = bto.leg_rs_no;
                     int range = bto.win_odds_top1_range;
-                    if (rangeMap.get(race_no) == range) {
+                    if (race_range == range) {
                         btList.add(new BetTypeSelection(bto.mtg_id, bto.leg_rs_no, bto.bet_type, bto.predict));
                     }
                 }
@@ -304,9 +308,10 @@ public class RecomendDataProvider {
 
         return new RaceTimeProvider(this.genRaceTimeData());
     }
-    public RaceStatus getRaceStatus(int raceNo){
-        for(int i = 0; i < this.dp.racepool.size() ; i++){
-            if(this.dp.racepool.get(i).race_no == raceNo){
+
+    public RaceStatus getRaceStatus(int raceNo) {
+        for (int i = 0; i < this.dp.racepool.size(); i++) {
+            if (this.dp.racepool.get(i).race_no == raceNo) {
                 return this.dp.racepool.get(i);
             }
         }
@@ -314,6 +319,3 @@ public class RecomendDataProvider {
     }
 
 }
-
-
-

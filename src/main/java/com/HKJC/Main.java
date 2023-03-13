@@ -43,16 +43,12 @@ import com.solacesystems.jcsmp.JCSMPProperties;
 import org.ojai.store.DriverManager;
 
 public class Main implements Runnable {
+    // do not declare env which not inited 
     final static String QUEUE_NAME = Configurator.getInstance().QUEUE_NAME;
-
     // hk/g/prdt/wager/evt/01/upd/ai/bet/recomd_req/{instant_id}/{account_no}/recomd/{status}
     final static String TOPIC = Configurator.getInstance().TOPIC;
     final static String QUEUE_JNDI_NAME = Configurator.getInstance().QUEUE_JNDI_NAME;
     final static String CONNECTION_FACTORY_JNDI_NAME = Configurator.getInstance().CONNECTION_FACTORY_JNDI_NAME;
-    final static String host = Configurator.getInstance().host;
-    final static String username = Configurator.getInstance().username;
-    final static String password = Configurator.getInstance().password;
-    final static String vpnName = Configurator.getInstance().vpnName;
 
     private CountDownLatch l;
 
@@ -67,7 +63,9 @@ public class Main implements Runnable {
             logger.info("Listener start...");
             this.handleMsg();
         } catch (Exception e) {
-            logger.error(e);
+            StackTraceElement ste = e.getStackTrace()[0];
+            logger.error("Class: " + ste.getClassName() + " Method: " + ste.getMethodName() + " Line:"
+                    + ste.getLineNumber() + " :" + e);
         }
         this.l.countDown();
     }
@@ -89,8 +87,13 @@ public class Main implements Runnable {
 
     private void handleMsg() throws Exception {
         final CountDownLatch latch = new CountDownLatch(1);
-
         Logger logger = Logger.getLogger(Main.class);
+
+        String host = Configurator.getInstance().host;
+        String username = Configurator.getInstance().username;
+        String password = Configurator.getInstance().password;
+        String vpnName = Configurator.getInstance().vpnName;
+
         logger.info("QueueConsumer is connecting to Solace messaging at %s...%n" + host);
         Connection connection;
         MessageConsumer messageConsumer;
@@ -123,6 +126,7 @@ public class Main implements Runnable {
         } else {
             // setup environment variables for creating of the initial context
             Hashtable<String, Object> env = new Hashtable<String, Object>();
+
             // use the Solace JNDI initial context factory
             env.put(InitialContext.INITIAL_CONTEXT_FACTORY, "com.solacesystems.jndi.SolJNDIInitialContextFactory");
 
@@ -376,6 +380,8 @@ public class Main implements Runnable {
             //
             // // Create a non-transacted, auto ACK session.
             // Session session = connection.createSession(false, Session.AUTO_ACKNOWLEDGE);
+            String username = Configurator.getInstance().username;
+            String vpnName = Configurator.getInstance().vpnName;
 
             logger.info(logPrefix + " Connected to the Solace Message VPN '%s' with client username " + vpnName + " " +
                     username);

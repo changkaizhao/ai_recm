@@ -13,7 +13,7 @@ public class OjaiDBStorePool {
     private static OjaiDBStorePool storePool;
 
     private OjaiDBStorePool(String connStr) {
-        //this.db = new OjaiDB(connStr, tablePath);
+        // this.db = new OjaiDB(connStr, tablePath);
         this.connStr = connStr;
         this.bettype_deque = new ConcurrentLinkedQueue<OjaiDB>();
         this.horse_deque = new ConcurrentLinkedQueue<OjaiDB>();
@@ -21,7 +21,7 @@ public class OjaiDBStorePool {
 
     }
 
-    public static OjaiDBStorePool getInstance(){
+    public static OjaiDBStorePool getInstance() {
         if (storePool == null) {
             storePool = new OjaiDBStorePool(Configurator.getInstance().mapr_connection);
         }
@@ -34,7 +34,7 @@ public class OjaiDBStorePool {
     }
 
     public void createOjaiDBsForBetTypePool(int num) {
-        for (int i=0; i<num; i++){
+        for (int i = 0; i < num; i++) {
             createOneOjaiDBForBetTypePool();
         }
     }
@@ -52,14 +52,14 @@ public class OjaiDBStorePool {
         this.bettype_deque.add(db);
     }
 
-    //===================================================================================
+    // ===================================================================================
     private void createOneOjaiDBForHorsePool() {
         OjaiDB db = new OjaiDB(this.connStr, Configurator.getInstance().tbl_path_horse);
         this.horse_deque.add(db);
     }
 
     public void createOjaiDBsForHorsePool(int num) {
-        for (int i=0; i<num; i++){
+        for (int i = 0; i < num; i++) {
             createOneOjaiDBForHorsePool();
         }
     }
@@ -77,14 +77,14 @@ public class OjaiDBStorePool {
         this.horse_deque.add(db);
     }
 
-    //===================================================================================
+    // ===================================================================================
     private void createOneOjaiDBForRaceProxiPool() {
         OjaiDB db = new OjaiDB(this.connStr, Configurator.getInstance().tbl_path_raceproxi);
         this.race_proxi_deque.add(db);
     }
 
     public void createOjaiDBsForRaceProxiPool(int num) {
-        for (int i=0; i<num; i++){
+        for (int i = 0; i < num; i++) {
             createOneOjaiDBForRaceProxiPool();
         }
     }

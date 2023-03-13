@@ -7,6 +7,9 @@ import org.apache.log4j.Logger;
 public class Configurator {
     // some constants
     public final boolean Debug = false;
+    public final boolean UseWorkaround = false; // if True will terminate data fetching when time over timeout threshold
+    public final int TimeoutThreshold = 200; // only used when UseWorkaround is True
+
     public final DataProviderType dataProviderType = DataProviderType.FileData;
 
     public final String QUEUE_NAME = "recw/evt/rsinfo";
@@ -112,48 +115,48 @@ public class Configurator {
     }
 
     public void init() throws Exception {
-        if (this.Debug) {
+        if (instance.Debug) {
             return;
         }
         Logger logger = Logger.getLogger(Configurator.class);
 
         try {
-            this.CPUNum = Integer.parseInt(System.getenv("THREAD_SIZE"));
+            instance.CPUNum = Integer.parseInt(System.getenv("THREAD_SIZE"));
         } catch (Exception e) {
-            this.CPUNum = 2;
+            instance.CPUNum = 2;
             logger.warn("THREAD_SIZE env var is not defined, use default 2");
         }
 
         try {
-            this.useKerberosAuth = Boolean.parseBoolean(System.getenv("USE_KERBEROS"));
+            instance.useKerberosAuth = Boolean.parseBoolean(System.getenv("USE_KERBEROS"));
         } catch (Exception e) {
-            this.useKerberosAuth = false;
+            instance.useKerberosAuth = false;
             logger.warn("USE_KERBEROS env var is not defined, use default false.");
         }
 
-        this.host = System.getenv("CAP_SOLACE");
-        if (this.host == null) {
+        instance.host = System.getenv("CAP_SOLACE");
+        if (instance.host == null) {
             Error e = new Error("CAP_SOLACE env var is not defined");
             logger.error(e);
             throw e;
         }
 
-        this.username = System.getenv("SOL_USR");
-        if (this.username == null) {
+        instance.username = System.getenv("SOL_USR");
+        if (instance.username == null) {
             Error e = new Error("SOL_USR env var is not defined");
             logger.error(e);
             throw e;
         }
 
-        this.password = System.getenv("SOL_PWD");
-        if (this.password == null) {
+        instance.password = System.getenv("SOL_PWD");
+        if (instance.password == null) {
             Error e = new Error("SOL_PWD env var is not defined");
             logger.error(e);
             throw e;
         }
 
-        this.fixture_endpoint = System.getenv("FIXTURE_ENDPOINT");
-        if (this.fixture_endpoint == null) {
+        instance.fixture_endpoint = System.getenv("FIXTURE_ENDPOINT");
+        if (instance.fixture_endpoint == null) {
             Error e = new Error("FIXTURE_ENDPOINT env var is not defined");
             logger.error(e);
             throw e;
@@ -163,45 +166,45 @@ public class Configurator {
         // e){logger.error(new Error("MAPR_ENDPOINT env var is not defined"));}
 
         try {
-            this.SSL_VALIDATE_CERTIFICATE = Boolean.parseBoolean(System.getenv("SSL_VALIDATE_CERTIFICATE"));
-            if (this.SSL_VALIDATE_CERTIFICATE == null) {
-                this.SSL_VALIDATE_CERTIFICATE = false;
+            instance.SSL_VALIDATE_CERTIFICATE = Boolean.parseBoolean(System.getenv("SSL_VALIDATE_CERTIFICATE"));
+            if (instance.SSL_VALIDATE_CERTIFICATE == null) {
+                instance.SSL_VALIDATE_CERTIFICATE = false;
                 logger.warn("SSL_VALIDATE_CERTIFICATE env var is not defined, use default false");
             }
         } catch (Exception e) {
-            this.SSL_VALIDATE_CERTIFICATE = false;
+            instance.SSL_VALIDATE_CERTIFICATE = false;
             logger.warn("SSL_VALIDATE_CERTIFICATE env var is not defined, use default false.");
         }
-        this.SSL_TRUST_STORE = System.getenv("SSL_TRUST_STORE");
-        if (this.SSL_TRUST_STORE == null) {
+        instance.SSL_TRUST_STORE = System.getenv("SSL_TRUST_STORE");
+        if (instance.SSL_TRUST_STORE == null) {
             Error e = new Error("SSL_TRUST_STORE env var is not defined");
             logger.error(e);
             throw e;
         }
 
-        this.SSL_TRUST_STORE_FORMAT = System.getenv("SSL_TRUST_STORE_FORMAT");
-        if (this.SSL_TRUST_STORE_FORMAT == null) {
+        instance.SSL_TRUST_STORE_FORMAT = System.getenv("SSL_TRUST_STORE_FORMAT");
+        if (instance.SSL_TRUST_STORE_FORMAT == null) {
             Error e = new Error("SSL_TRUST_STORE_FORMAT env var is not defined");
             logger.error(e);
             throw e;
         }
 
-        this.SSL_TRUST_STORE_PASSWORD = System.getenv("SSL_TRUST_STORE_PASSWORD");
-        if (this.SSL_TRUST_STORE_PASSWORD == null) {
+        instance.SSL_TRUST_STORE_PASSWORD = System.getenv("SSL_TRUST_STORE_PASSWORD");
+        if (instance.SSL_TRUST_STORE_PASSWORD == null) {
             Error e = new Error("SSL_TRUST_STORE_PASSWORD env var is not defined");
             logger.error(e);
             throw e;
         }
 
-        this.fileRootPath = System.getenv("FILE_ROOT_PATH");
-        if (this.fileRootPath == null) {
+        instance.fileRootPath = System.getenv("FILE_ROOT_PATH");
+        if (instance.fileRootPath == null) {
             Error e = new Error("FILE_ROOT_PATH env var is not defined");
             logger.error(e);
             throw e;
         }
 
         try {
-            this.mapr_connection = this.getMaprConnectionString();
+            instance.mapr_connection = this.getMaprConnectionString();
         } catch (Exception e) {
             logger.error(e);
             throw e;
@@ -211,6 +214,8 @@ public class Configurator {
 
     public static Configurator getInstance() {
         if (instance == null) {
+            Logger logger = Logger.getLogger(Configurator.class);
+            logger.info("Configurator is not initialized, initialize it now.");
             instance = new Configurator();
         }
         return instance;

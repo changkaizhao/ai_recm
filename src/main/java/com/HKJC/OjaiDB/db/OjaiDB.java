@@ -4,6 +4,7 @@ import org.ojai.Document;
 import org.ojai.store.Connection;
 import org.ojai.store.DocumentStore;
 import org.ojai.store.DriverManager;
+import org.apache.log4j.Logger;
 
 public class OjaiDB {
     private String connStr;
@@ -22,6 +23,7 @@ public class OjaiDB {
     }
 
     private void connect() {
+        Logger logger = Logger.getLogger(OjaiDB.class);
         this.connection = DriverManager.getConnection(this.connStr);
         this.store = this.connection.getStore(this.tablePath);
     }
@@ -32,7 +34,7 @@ public class OjaiDB {
     }
 
     public String findById(String id) throws NullPointerException {
-        //StringBuffer stringBuffer = new StringBuffer();
+        // StringBuffer stringBuffer = new StringBuffer();
         Document doc = this.store.findById(id);
         return doc.asJsonString();
     }
