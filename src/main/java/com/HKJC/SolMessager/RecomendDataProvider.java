@@ -173,20 +173,21 @@ public class RecomendDataProvider {
                     float odd = minOdd.get(key);
                     for (int k = 0; k < this.dp.worMapping.size(); k++) {
                         if (this.dp.worMapping.get(k).in(odd)) {
-                            rangeMap.put(key, this.dp.worMapping.get(k).win_odds_top1_range);
+                            int race_range = this.dp.worMapping.get(k).win_odds_top1_range;
+                            rangeMap.put(key, race_range);
+                            logger.info("get win_odd_top1_range:" + race_range + " with race_no:" + key
+                                    + " from data winodds");
                             break;
                         }
                     }
                 }
 
-                int race_range = rangeMap.get(race_no);
-                logger.info("get win_odd_top1_range:" + race_range + " with race_no:" + race_no + " from data winodds");
                 // find range and raceNo matched bettype
                 ArrayList<BetTypeSelection> btList = new ArrayList<>();
                 for (int i = 0; i < this.dp.betTypeOdds.size(); i++) {
                     BetTypeOdd bto = this.dp.betTypeOdds.get(i);
-
                     int race_no = bto.leg_rs_no;
+                    int race_range = rangeMap.get(race_no);
                     int range = bto.win_odds_top1_range;
                     if (race_range == range) {
                         btList.add(new BetTypeSelection(bto.mtg_id, bto.leg_rs_no, bto.bet_type, bto.predict));
